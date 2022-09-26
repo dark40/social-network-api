@@ -1,47 +1,22 @@
 const { ObjectId } = require('mongoose').Types;
 const { Thought, Reaction, User } = require('../models');
 
-// aggregate function to get the length of thought's reaction
-const reactionCount = async (thoughtId) =>
-    Thought.aggregate([
-        { $match: { _id: ObjectId(thoughtId) } },
-        { $unwind: '$reactions' },
-        {
-            $group: {
-                _id: ObjectId(thoughtId),
-                reactionCount: { $count: '$reactions.reactionId' }
-            }
-        }
-    ])
-
 module.exports = {
     // get all thoughts
     getThoughts(req, res) {
         Thought.find()
-            .then(async (thoughts) => {
-                const thoughtObj = {
-                    thoughts,
-                    reactionCount: await reactionCount(req.params.thoughtId),
-                };
-                return res.json(thoughtObj)
-            })
-            .catch((err) => {
-                console.log(err);
-                return res.status(500).json(err);
-            });
+        .then((thoughts) => res.json(thoughts))
+        .catch((err) => res.status(500).json(err));
     },
 
     // get single thought by id 
     getSingleThought(req, res) {
         Thought.findOne({ _id: req.params.thoughtId })
-            .select('-__v')
-            .then(async (thought) =>
+            .select("-__v")
+            .then((thought) =>
                 !thought
                     ? res.status(404).json({ message: 'No thought with that id' })
-                    : res.json({
-                        thought,
-                        reactionCount: await reactionCount(req.params.thoughtId)
-                    })
+                    : res.json(thought)
             )
             .catch((err) => {
                 console.log(err);

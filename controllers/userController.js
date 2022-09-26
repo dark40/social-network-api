@@ -1,47 +1,21 @@
 const { ObjectId } = require('mongoose').Types;
 const { User, Thought } = require('../models');
 
-// Aggregate function to get the length of user's friends.
-const friendCount = async (userId) =>
-    User.aggregate([
-        { $match: { _id: ObjectId(userId) } },
-        { $unwind: '$friends' },
-        {
-            $group: {
-                _id: ObjectId(userId),
-                friendCount: { $count: '$friends' }
-            }
-        }
-    ])
-
 module.exports = {
     // Get all users
     getUsers(req, res) {
         User.find()
-            .then(async (users) => {
-                const userObj = {
-                    users,
-                    friendCount: await friendCount(req.params.userId),
-                };
-                return res.json(userObj)
-            })
-            .catch((err) => {
-                console.log(err);
-                return res.status(500).json(err);
-            });
+            .then((users) => res.json(users))
+            .catch((err) => res.status(500).json(err));
     },
 
     // Get a single user by id
     getSingleUser(req, res) {
         User.findOne({ _id: req.params.userId })
-            .select('-__v')
-            .then(async (user) =>
+            .then((user) =>
                 !user
                     ? res.status(404).json({ message: 'No user with that ID' })
-                    : res.json({
-                        user,
-                        friendCount: await friendCount(req.params.userId),
-                    })
+                    : res.json(user)
             )
             .catch((err) => {
                 console.log(err);
@@ -89,7 +63,7 @@ module.exports = {
         console.log(req.body);
         User.findOneAndUpdate(
             { _id: req.params.userId },
-            { $addToSet: { friends: req.body } },
+            { $addToSet: { friends: req.params.friendId } },
             { runValidators: true, new: true }
         )
             .then((user) =>
@@ -104,7 +78,7 @@ module.exports = {
     removeFriend(req, res) {
         User.findOneAndUpdate(
             { _id: req.params.userId },
-            { $pull: { friends: { userId: req.params.friendId } } },
+            { $pull: { friends: req.params.friendId } },
             { runValidators: true, new: true }
         )
             .then((user) =>
